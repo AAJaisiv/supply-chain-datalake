@@ -1,0 +1,17 @@
+Feature,Simple Explanation
+rhit_within_2wks,Was there a regional stock-out in the past 2 weeks?
+oo_dos,Days of supply based only on incoming orders
+doh_less_ss,"Is Days on Hand below Safety Stock? (1 = Yes, 0 = No)"
+days_below_ss,How many days were spent below safety stock recently
+no_ship_ratio,Portion of orders not shipped at all by the supplier
+ltm_90pct,90th percentile of lead time — long delivery delays
+ltm_75pct,75th percentile of lead time — moderate delivery delays
+ltm_median,Median lead time — typical delivery time
+ltm_90pct_difference_wks,Difference between worst-case and typical lead time
+mdi_stockouts,Count of stockouts at Managed Dealer Inventory locations
+ots_pct,Percent of orders delivered on time
+ss_units_left_pct,Percent of safety stock still available
+dmd_wkly_dos,Weekly coverage of inventory based on demand
+doh_to_ltm,Ratio of Days on Hand to Lead Time — higher = safer
+days_on_hand,Current inventory coverage in days
+rhit_label,"Future regional stock-out occurred? (1 = Yes, 0 = No)"

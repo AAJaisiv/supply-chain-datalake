@@ -1,0 +1,10 @@
+%% Supply Chain Data Lake Architecture
+flowchart TD
+    A[Raw Data (S3)] --> B[AWS Glue ETL]
+    B --> C[Processed Data (S3)]
+    C --> D[Athena/Redshift Spectrum]
+    D --> E[Business Insights]
+    C --> F[Glue Data Catalog]
+    F --> D
+    C --> G[Lake Formation]
+    G --> D 

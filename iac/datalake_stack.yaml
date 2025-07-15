@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  AWS Data Lake for Supply Chain Analytics - Core Infrastructure
+  Provisions S3 buckets, IAM roles, Glue database, Athena workgroup, and KMS key.
+
+Parameters:
+  RawDataBucketName:
+    Type: String
+    Description: Name for the raw data S3 bucket
+  ProcessedDataBucketName:
+    Type: String
+    Description: Name for the processed data S3 bucket
+  Region:
+    Type: String
+    Default: us-west-2
+    Description: AWS region for resources
+
+Resources:
+  # S3 Buckets
+  RawDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref RawDataBucketName
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref DataLakeKMSKey
+
+  ProcessedDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref ProcessedDataBucketName
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref DataLakeKMSKey
+
+  # KMS Key for S3 Encryption
+  DataLakeKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for S3 bucket encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: 'kms:*'
+            Resource: '*'
+
+  # IAM Role for Glue
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: glue-job-role-supplychain
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+      Policies:
+        - PolicyName: GlueS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                  - kms:Decrypt
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: '*'
+
+  # IAM Role for Athena
+  AthenaQueryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: athena-query-role-supplychain
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: athena.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AthenaS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - kms:Decrypt
+                Resource: '*'
+
+  # Glue Database
+  SupplyChainGlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: supplychain_datalake
+        Description: Glue database for supply chain analytics
+
+  # Athena Workgroup
+  AthenaWorkGroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: supplychain-analytics-wg
+      Description: Workgroup for supply chain analytics queries
+      State: ENABLED
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub s3://${ProcessedDataBucketName}/athena-results/
+
+  # Glue Crawler for Raw Data
+  RawDataGlueCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name: raw-data-crawler
+      Role: !GetAtt GlueJobRole.Arn
+      DatabaseName: !Ref SupplyChainGlueDatabase
+      Targets:
+        S3Targets:
+          - Path: !Sub s3://${RawDataBucketName}/
+      SchemaChangePolicy:
+        UpdateBehavior: UPDATE_IN_DATABASE
+        DeleteBehavior: DEPRECATE_IN_DATABASE
+      Description: Crawler to scan raw data and update Glue Data Catalog
+
+  # Glue Job Skeleton for ETL
+  SupplyChainGlueJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: supplychain-etl-job
+      Role: !GetAtt GlueJobRole.Arn
+      Command:
+        Name: glueetl
+        ScriptLocation: !Sub s3://${RawDataBucketName}/scripts/etl_script.py
+        PythonVersion: 3
+      DefaultArguments:
+        --TempDir: !Sub s3://${ProcessedDataBucketName}/glue-temp/
+        --job-language: python
+      GlueVersion: '3.0'
+      MaxRetries: 1
+      NumberOfWorkers: 2
+      WorkerType: Standard
+      Description: Skeleton Glue ETL job for supply chain data lake
+
+Outputs:
+  RawDataBucket:
+    Description: S3 bucket for raw data
+    Value: !Ref RawDataBucket
+  ProcessedDataBucket:
+    Description: S3 bucket for processed data
+    Value: !Ref ProcessedDataBucket
+  GlueDatabase:
+    Description: Glue database for supply chain analytics
+    Value: !Ref SupplyChainGlueDatabase
+  AthenaWorkGroup:
+    Description: Athena workgroup for analytics
+    Value: !Ref AthenaWorkGroup
+  GlueJobRole:
+    Description: IAM role for AWS Glue jobs
+    Value: !GetAtt GlueJobRole.Arn
+  AthenaQueryRole:
+    Description: IAM role for Athena queries
+    Value: !GetAtt AthenaQueryRole.Arn
+  DataLakeKMSKey:
+    Description: KMS key for S3 encryption
+    Value: !Ref DataLakeKMSKey 

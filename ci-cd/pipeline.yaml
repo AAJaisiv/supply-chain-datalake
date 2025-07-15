@@ -1,0 +1,55 @@
+name: CI/CD Pipeline for AWS Data Lake
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-west-2
+      RAW_DATA_BUCKET: ${{ secrets.RAW_DATA_BUCKET }}
+      PROCESSED_DATA_BUCKET: ${{ secrets.PROCESSED_DATA_BUCKET }}
+      CF_STACK_NAME: supplychain-datalake-stack
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint Python code
+        run: |
+          pip install flake8
+          flake8 src/
+
+      # Deploy CloudFormation stack
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file iac/datalake_stack.yaml \
+            --stack-name $CF_STACK_NAME \
+            --parameter-overrides RawDataBucketName=$RAW_DATA_BUCKET ProcessedDataBucketName=$PROCESSED_DATA_BUCKET \
+            --capabilities CAPABILITY_NAMED_IAM
+
+      # Upload ETL scripts to S3
+      - name: Upload ETL script to S3
+        run: |
+          aws s3 cp src/etl_script.py s3://$RAW_DATA_BUCKET/scripts/etl_script.py 
