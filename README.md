@@ -1,7 +1,5 @@
 # AWS Supply Chain Data Lake
 
-A modern, end-to-end data engineering project demonstrating how to build a scalable, secure, and cost-optimized data lake on AWS for supply chain analytics. This project leverages S3, Glue, Athena, Redshift Spectrum, and Lake Formation, with CI/CD and monitoring best practices.
-
 ---
 
 ##  Project Structure
@@ -141,3 +139,6 @@ Released under the **MIT License**. See `LICENSE` for details.
 7. Monitor and optimize
 
 ---
+> **Note:** This project was originally developed for a client. Due to a signed Non-Disclosure Agreement (NDA), the client's name and specific details cannot be disclosed. Resource names and certain identifiers in the codebase have been anonymized or omitted in accordance with the NDA requirements.
+
+> **Additional Contribution:** Machine learning models for supply chain analytics were developed as part of this project. For details, please refer to the data modeling and modeling files included in the repository.
