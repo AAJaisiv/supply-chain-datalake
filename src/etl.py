@@ -23,7 +23,7 @@ glue_client = boto3.client('glue')
 
 def upload_raw_data():
     """
-    Upload raw data file to S3 bucket
+    Uploading raw data file to S3 bucket
     """
     logger.info(f"Uploading {RAW_DATA_FILE} to s3://{RAW_BUCKET}/{S3_RAW_KEY}")
     success = upload_file_to_s3(RAW_DATA_FILE, RAW_BUCKET, S3_RAW_KEY)
@@ -34,7 +34,7 @@ def upload_raw_data():
 
 def trigger_glue_crawler():
     """
-    Start the Glue Crawler to update the Data Catalog
+    Starting the Glue Crawler to update the Data Catalog
     """
     logger.info(f"Triggering Glue Crawler: {GLUE_CRAWLER_NAME}")
     try:
@@ -46,7 +46,7 @@ def trigger_glue_crawler():
 
 def trigger_glue_job():
     """
-    Start the Glue ETL Job for data transformation
+    Starting the Glue ETL Job for data transformation
     """
     logger.info(f"Triggering Glue Job: {GLUE_JOB_NAME}")
     try:
